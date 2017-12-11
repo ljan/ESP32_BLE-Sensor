@@ -25,7 +25,7 @@ BLECharacteristic *pCharacteristicElev;
 bool deviceConnected = false;
 
 uint8_t batterylevel = 100;
-int elevation = 0;  // 24 bit
+int32_t elevation = 0;  // BLE Characteristic uses sint24_t
 
 // Define Service UUIDs:
 #define SERVICE_BATTERY         (uint16_t)0x180F  // Name: Battery Service
@@ -48,8 +48,9 @@ class MyServerCallbacks: public BLEServerCallbacks {
 }; // BLE Callback
 
 // Get Elevation
-uint16_t getElevation() {
-  return random(0x000, 0xFFFFFF);
+int32_t getElevation() {
+  // Unit is in meters with a resolution of 0.01 m
+  return random(0x000, 0x00FFFFFF);
 } // Get Elevation
 
 // Setup

@@ -20,14 +20,19 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
-BLECharacteristic *pCharacteristic;
+BLECharacteristic *pCharacteristicAlti;
+BLECharacteristic *pCharacteristicBatt;
 bool deviceConnected = false;
+
+uint8_t batterylevel = 100;
 uint16_t altitude = 0;
 
 // Define Service UUIDs:
+#define SERVICE_BATTERY         (uint16_t)0x180F  // Name: Battery Service
 #define SERVICE_LOCNAV          (uint16_t)0x1819  // Name: Location and Navigation
 
 // Define Characteristic UUIDs:
+#define CHARACTERISTIC_BATTERY  (uint16_t)0x2A19  // Name: Battery Level
 #define CHARACTERISTIC_ALTITUDE (uint16_t)0x2AB3  // Name: Altitude
 
 
@@ -58,11 +63,21 @@ void setup() {
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
+  // Create the BLE Service for Battery
+  BLEService *pServiceBatt = pServer->createService(SERVICE_BATTERY);
+
   // Create the BLE Service for Location and Navigation
-  BLEService *pService = pServer->createService(SERVICE_LOCNAV);
+  BLEService *pServiceAlti = pServer->createService(SERVICE_LOCNAV);
+
+  // Create a BLE Characteristic for Batterylevel
+  pCharacteristicBatt = pServiceBatt->createCharacteristic(
+                      BLEUUID(CHARACTERISTIC_BATTERY),
+                      BLECharacteristic::PROPERTY_READ   |
+                      BLECharacteristic::PROPERTY_NOTIFY
+                    );
 
   // Create a BLE Characteristic for Altitude
-  pCharacteristic = pService->createCharacteristic(
+  pCharacteristicAlti = pServiceAlti->createCharacteristic(
                       BLEUUID(CHARACTERISTIC_ALTITUDE),
                       BLECharacteristic::PROPERTY_READ   |
                       BLECharacteristic::PROPERTY_WRITE  |
@@ -72,10 +87,12 @@ void setup() {
 
   // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
   // Create a BLE Descriptor
-  pCharacteristic->addDescriptor(new BLE2902());
+  pCharacteristicBatt->addDescriptor(new BLE2902());
+  pCharacteristicAlti->addDescriptor(new BLE2902());
 
   // Start the service
-  pService->start();
+  pServiceBatt->start();
+  pServiceAlti->start();
 
   // Start advertising
   pServer->getAdvertising()->start();
@@ -86,12 +103,21 @@ void setup() {
 void loop() {
   altitude = getAltitude();
 
+  if (batterylevel > 5) {
+    batterylevel = batterylevel - 5;
+  }else {
+    batterylevel = 100;
+  }
+
   if (deviceConnected) {
+    pCharacteristicBatt->setValue((uint8_t*)&batterylevel, 1);
+    pCharacteristicBatt->notify();
+    
     Serial.printf("*** NOTIFY: %d ***\n", altitude);
     //the function excepts a uint8_t pointer - we point to a int16_t so the size is 2
-    pCharacteristic->setValue((uint8_t*)&altitude, 2);
-    pCharacteristic->notify();
-    //pCharacteristic->indicate();
+    pCharacteristicAlti->setValue((uint8_t*)&altitude, 2);
+    pCharacteristicAlti->notify();
+    //pCharacteristicAlti->indicate();
   }
   delay(2000);
 } // Main

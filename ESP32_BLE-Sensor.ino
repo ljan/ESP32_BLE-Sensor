@@ -22,15 +22,16 @@
 
 BLECharacteristic *pCharacteristic;
 bool deviceConnected = false;
-uint8_t value = 0;
+uint16_t altitude = 0;
 
-// See the following for generating UUIDs:
-// https://www.uuidgenerator.net/
+// Define Service UUIDs:
+#define SERVICE_LOCNAV          (uint16_t)0x1819  // Name: Location and Navigation
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+// Define Characteristic UUIDs:
+#define CHARACTERISTIC_ALTITUDE (uint16_t)0x2AB3  // Name: Altitude
 
 
+// BLE Callback
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
@@ -39,10 +40,14 @@ class MyServerCallbacks: public BLEServerCallbacks {
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
     }
-};
+}; // BLE Callback
 
+// Get Altitude
+uint16_t getAltitude() {
+  return random(0x000, 0xFFFF);
+} // Get Altitude
 
-
+// Setup
 void setup() {
   Serial.begin(115200);
 
@@ -53,12 +58,12 @@ void setup() {
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
-  // Create the BLE Service
-  BLEService *pService = pServer->createService(SERVICE_UUID);
+  // Create the BLE Service for Location and Navigation
+  BLEService *pService = pServer->createService(SERVICE_LOCNAV);
 
-  // Create a BLE Characteristic
+  // Create a BLE Characteristic for Altitude
   pCharacteristic = pService->createCharacteristic(
-                      CHARACTERISTIC_UUID,
+                      BLEUUID(CHARACTERISTIC_ALTITUDE),
                       BLECharacteristic::PROPERTY_READ   |
                       BLECharacteristic::PROPERTY_WRITE  |
                       BLECharacteristic::PROPERTY_NOTIFY |
@@ -75,16 +80,19 @@ void setup() {
   // Start advertising
   pServer->getAdvertising()->start();
   Serial.println("Waiting a client connection to notify...");
-}
+} // Setup
 
+// Main
 void loop() {
+  altitude = getAltitude();
 
   if (deviceConnected) {
-    Serial.printf("*** NOTIFY: %d ***\n", value);
-    pCharacteristic->setValue(&value, 1);
+    Serial.printf("*** NOTIFY: %d ***\n", altitude);
+    //the function excepts a uint8_t pointer - we point to a int16_t so the size is 2
+    pCharacteristic->setValue((uint8_t*)&altitude, 2);
     pCharacteristic->notify();
     //pCharacteristic->indicate();
-    value++;
   }
   delay(2000);
-}
+} // Main
+

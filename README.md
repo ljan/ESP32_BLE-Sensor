@@ -4,6 +4,7 @@ First try to provide Sensor Data via BLE with the ESP32.
 
 ## References
 BLE:
+Environmental Sensing
 [Environmental Sensing GATT Profile](https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.service.environmental_sensing.xml)
 
 [Ble Environmental Sensing Profile PDF](https://www.bluetooth.org/docman/handlers/downloaddoc.ashx?doc_id=294796)
